@@ -9,10 +9,9 @@ body {
   /* justify-content: center; */
 }
 
-.container {
-  display: flex;
-  flex-flow: row nowrap;
+.form {
   background: rgba(180, 180, 180, 0.1);
+  padding: 10px;
 }
 
 .unit {
@@ -61,4 +60,8 @@ body {
 
 li:hover {
   transform: scale(1.1);
+}
+
+Label {
+  color: white;
 }

@@ -23,7 +23,7 @@ function Greeting() {
     </div>
   )
 }
-const API_KEY = process.env.REACT_APP_API_KEY;
+
 class Weather extends React.Component {
   state = {
     longitude: 0,
@@ -41,6 +41,7 @@ class Weather extends React.Component {
   }
 
   componentDidMount() {
+    const API_KEY = process.env.REACT_APP_API_KEY;
     navigator.geolocation.getCurrentPosition((position) => {
       this.setState({
         longitude: position.coords.longitude,
@@ -85,29 +86,23 @@ class Item extends React.Component {
   state = {
     items: (localStorage['list'] && JSON.parse(localStorage['list'])) || [],
     isChecked: false,
-    isId: '',
+    updateItemId: '',
     value: ''
   }
 
-  handleChange = (e) => {
-    this.setState({ value: e.target.value })
-  }
+  handleChange = ({ target: { value } }) => this.setState({ value })
+
 
   submitItem = (e) => {
     e.preventDefault();
-    const isId = this.state.isId;
-    if (isId === '') {
-      const todo = { value: this.state.value, id: UUID(), style: 'black' };
-      this.state.items.push(todo);
-      this.setState(({ items: this.state.items }), () => this.updateLocalStorage());
-      this.setState({ value: '' });
+    const { updateItemId, value, items } = this.state;
+
+    if (updateItemId === '') {
+      const newItems = [...items, { value, id: UUID(), completed: false }]
+      this.setState(({ items: newItems, value: '' }), () => this.updateLocalStorage());
     } else {
-      const updateItem = { value: this.state.value, id: isId, style: 'black' };
-      const index = this.state.items.findIndex(a => a.id === isId);
-      this.state.items.splice(index, 1, updateItem);
-      this.setState(({ items: this.state.items }), () => this.updateLocalStorage());
-      this.setState({ value: '' });
-      this.setState({ isId: '' });
+      const updatedItems = items.map(x => x.id === updateItemId ? { ...x, value } : x)
+      this.setState(({ items: updatedItems, value: '', updateItemId: '' }), () => this.updateLocalStorage());
 
     }
   }
@@ -116,19 +111,10 @@ class Item extends React.Component {
     localStorage['list'] = JSON.stringify(this.state.items)
   }
 
-  handleCheck = (id) => {
-    this.setState({ isChecked: !this.state.isChecked });
-    const item = this.state.items.find(t => t.id === id);
-    const check = item.style;
-    const isChecked = this.state.isChecked;
-    console.log(isChecked, check)
-    if (!isChecked && check === 'black') {
-      item.style = 'blue';
-    } else if (isChecked && check === 'black') {
-      item.style = 'blue'
-    } else {
-      item.style = 'black'
-    }
+
+  handleOnCheck = (id) => {
+    const items = this.state.items.map(x => x.id === id ? { ...x, completed: !x.completed } : x);
+    this.setState({ items }, () => this.updateLocalStorage())
   }
 
   deleteItem = (id) => {
@@ -138,39 +124,40 @@ class Item extends React.Component {
 
   editItem = (id) => {
     const item = this.state.items.find(x => x.id === id);
-    this.setState({ isId: id });
-    this.setState({ value: item.value });
+    this.setState({ updateItemId: id, value: item.value });
   }
 
-  render() {
-    const show = this.state.items;
-    const showToDo = show.map(item => {
-      return (
-        <div className='unit'
-          style={{ color: item.style }}
-          key={item.id}
-          id={item.id} >
-          <ul>
-            <li>
-              {item.value}{'  '}
-              <input type='checkbox'
-                onClick={this.handleCheck.bind(this, item.id)} />
-            </li>
-          </ul>
+  showToDo = () => {
+    return this.state.items.map(item => (
+      <div className='unit'
+        style={{ textDecoration: item.completed ? 'line-through' : '' }}
+        key={item.id}
+        id={item.id} >
+        <ul>
+          <li>
+            {item.value}{'  '}
+            <input type='checkbox'
+              onClick={this.handleOnCheck.bind(this, item.id)} />
+          </li>
+        </ul>
+        <div>
           <Button
             onClick={this.deleteItem.bind(this, item.id)}
             color='danger' size='sm'>Delete
-          </Button>{' '}
+        </Button>{' '}
           <Button
             onClick={this.editItem.bind(this, item.id)}
             color='primary' size='sm'>Edit
-          </Button>
+        </Button>
         </div>
-      )
-    })
+      </div>
+    ))
+  }
+
+  render() {
     return (
-      <div className='container'>
-        <Form onSubmit={this.submitItem} className='unit'>
+      <div className='form'>
+        <Form onSubmit={this.submitItem}>
           <FormGroup>
             <Label for='todo'>To-Do:</Label>
             <Input
@@ -182,9 +169,7 @@ class Item extends React.Component {
           </FormGroup>
           <Button color='success'>Save</Button>
         </Form>
-        <div>
-          {showToDo}
-        </div>
+        {this.showToDo()}
       </div>
     )
   };
@@ -195,13 +180,12 @@ class App extends React.Component {
     return (
       <div className='page'>
         <div className='left'>
-          <div><Greeting /></div>
-          <div><Weather /></div>
+          <Greeting />
+          <Weather />
         </div>
         <div className='right'>
           <Item />
         </div>
-
       </div>
     );
   }
